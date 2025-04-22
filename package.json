@@ -2,7 +2,7 @@
   "name": "servidor-calistenia",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "database.js",
   "scripts": {
     "dev": "nodemon database.js",
     "start": "node database.js"
