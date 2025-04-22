@@ -11,10 +11,10 @@ const login = async (req, res) => {
 
   try {
     const normalizedEmail = email.toLowerCase();
-    let usuario = await Alumno.findOne({ email: normalizedEmail }).lean();
+    let usuario = await Alumno.find({ email: normalizedEmail }).lean();
 
     if (!usuario) {
-      usuario = await Administrador.findOne({ email: normalizedEmail }).lean();
+      usuario = await Administrador.find({ email: normalizedEmail }).lean();
     }
 
     if (!usuario) {

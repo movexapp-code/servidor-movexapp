@@ -53,7 +53,7 @@ const eliminarArchivo = async (req, res) => {
 
     await eliminarArchivoService(archivo.public_id);
 
-    await archivo.remove();
+    await archivo.deleteOne();
 
     res.status(200).json({ message: "Archivo eliminado correctamente" });
   } catch (error) {

@@ -8,6 +8,7 @@ const AlumnoSchema = new Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     tipoAlumno: { type: String, default: "principiante" },
+
     archivos: [
       {
         url: String,
@@ -15,18 +16,21 @@ const AlumnoSchema = new Schema(
         id: String,
       },
     ],
+
     archivosAsignados: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Archivo",
       },
     ],
+
     respuestas: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Respuesta",
       },
     ],
+
     rutina: [
       {
         fecha: { type: Date, default: Date.now },
@@ -48,80 +52,41 @@ const AlumnoSchema = new Schema(
         ],
       },
     ],
+
     rol: { type: String, default: "alumno" },
     activo: { type: Boolean, default: true },
+
     comentarios: [
       {
         comentario: String,
         fecha: { type: Date, default: Date.now },
       },
     ],
-    peso: {
-      type: Number,
-      default: 0,
-    },
-    altura: {
-      type: Number,
-      default: 0,
-    },
-    edad: {
-      type: Number,
-      default: 0,
-    },
-    imc: {
-      type: Number,
-      default: 0,
-    },
-    porcentajeGrasa: {
-      type: Number,
-      default: 0,
-    },
-    porcentajeMusculo: {
-      type: Number,
-      default: 0,
-    },
-    porcentajeAgua: {
-      type: Number,
-    },
-    default: 0,
-    metabolismoBasal: {
-      type: Number,
-      default: 0,
-    },
-    metabolismoActivo: {
-      type: Number,
-      default: 0,
-    },
-    metabolismoTotal: {
-      type: Number,
-      default: 0,
-    },
 
-    flexibiliadad: {
-      type: Number,
-      default: 0,
-    },
-    fuerza: {
-      type: Number,
-      default: 0,
-    },
-    resistencia: {
-      type: Number,
-      default: 0,
-    },
-    movilidad: {
-      type: Number,
-      default: 0,
-    },
-    porcentajeGlobal: {
-      type: Number,
-      default: 0,
-    },
+    peso: { type: Number, default: 0 },
+    altura: { type: Number, default: 0 },
+    edad: { type: Number, default: 0 },
+    imc: { type: Number, default: 0 },
+    porcentajeGrasa: { type: Number, default: 0 },
+    porcentajeMusculo: { type: Number, default: 0 },
+    porcentajeAgua: { type: Number, default: 0 },
+
+    metabolismoBasal: { type: Number, default: 0 },
+    metabolismoActivo: { type: Number, default: 0 },
+    metabolismoTotal: { type: Number, default: 0 },
+
+    flexibiliadad: { type: Number, default: 0 },
+    fuerza: { type: Number, default: 0 },
+    resistencia: { type: Number, default: 0 },
+    movilidad: { type: Number, default: 0 },
+    porcentajeGlobal: { type: Number, default: 0 },
+
     tipoMembresia: {
       type: String,
       enum: ["basica", "premium"],
       default: "basica",
     },
+
     fechaInicio: {
       type: Date,
       default: Date.now,

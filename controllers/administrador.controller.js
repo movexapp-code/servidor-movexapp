@@ -152,7 +152,7 @@ const eliminarArchivo = async (req, res) => {
     // Eliminar el archivo de Cloudinary
     await cloudinary.uploader.destroy(archivo.public_id);
     // Eliminar el archivo de la base de datos
-    administrador.archivos.id(idarchivo).remove();
+    administrador.archivos.filter((arch) => arch._id != idarchivo);
     await administrador.save();
     res.status(200).json({ message: "Archivo eliminado exitosamente" });
   } catch (error) {
@@ -495,5 +495,5 @@ module.exports = {
   obtenerArchivosAdmin,
   eliminarArchivo,
   crearRutinaGeneral,
-  obtenerRutinasGenerales
+  obtenerRutinasGenerales,
 };

@@ -13,11 +13,18 @@ const guardarRespuestas = async (req, res, next) => {
     if (!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
-    const formId = await Formulario.findOne();
-    // Convertir IDs en ObjectId
+
+    // Buscar el formulario (asumiendo que solo hay uno o quieres el primero)
+    const formulario = await Formulario.findOne();
+    let formularioId;
+    if (!formulario) {
+      return res.status(404).json({ message: "No se encontró ningún formulario." });
+    }
+    formularioId = formulario._id;
+
     const respuestaDoc = await Respuesta.findOne({
       usuario: usuarioId,
-      formulario: formId,
+      formulario: formularioId,
     });
 
     if (respuestaDoc) {
@@ -27,8 +34,6 @@ const guardarRespuestas = async (req, res, next) => {
         const index = respuestaDoc.respuestas.findIndex(
           (r) => r.preguntaId.toString() === preguntaId.toString()
         );
-
-        usuario.respuestas.push(respuestaDoc._id);
 
         if (index !== -1) {
           // Actualiza la respuesta existente
@@ -42,8 +47,12 @@ const guardarRespuestas = async (req, res, next) => {
         }
       });
 
-      await usuario.save();
+      // Añadir la referencia a la respuesta en el usuario solo si no existe
+      if (!usuario.respuestas.includes(respuestaDoc._id)) {
+        usuario.respuestas.push(respuestaDoc._id);
+      }
 
+      await usuario.save();
       await respuestaDoc.save();
       return res.status(200).json({
         message: "Respuestas actualizadas exitosamente",
@@ -54,16 +63,19 @@ const guardarRespuestas = async (req, res, next) => {
       // Crear un nuevo documento de respuestas
       const nuevaRespuestaDoc = new Respuesta({
         usuario: usuarioId,
-        formulario: formId,
+        formulario: formularioId,
         respuestas: respuestas.map((r) => ({
           preguntaId: mongoose.Types.ObjectId(r.preguntaId),
           respuesta: r.respuesta,
         })),
       });
 
-      //console.log(nuevaRespuestaDoc);
-
       await nuevaRespuestaDoc.save();
+
+      // Añadir la referencia a la nueva respuesta en el usuario
+      usuario.respuestas.push(nuevaRespuestaDoc._id);
+      await usuario.save();
+
       return res.status(201).json({
         message: "Respuestas guardadas exitosamente",
         respuesta: nuevaRespuestaDoc,
@@ -94,10 +106,6 @@ const obtenerRespuestasUsuario = async (req, res, next) => {
       usuario: id,
       formulario: formulario._id,
     });
-
-    console.log(respuestaDoc);
-
-    //console.log(formulario);
 
     // Creamos un mapeo: preguntaId -> respuesta (si existe)
     let respuestaMap = {};
