@@ -3,19 +3,22 @@
 const Alumno = require("../models/User");
 const cloudinary = require("cloudinary").v2;
 const Administrador = require("../models/Administrador");
+const Rutina = require("../models/Rutina");
 const PDFDocument = require("pdfkit");
 const subirArchivoService = require("../services/SubirArchivo");
+const Archivo = require("../models/Archivos");
 const mongoose = require("mongoose");
 
 //crear Administrador
 const crearAdministrador = async (req, res, next) => {
   try {
-    const { nombre, apellido, email, password } = req.body;
+    const { nombre, apellido, email, password, rol } = req.body;
     const nuevoAdministrador = new Administrador({
       nombre,
       apellido,
       email,
       password,
+      rol,
     });
     await nuevoAdministrador.save();
     res.status(201).json({
@@ -29,18 +32,19 @@ const crearAdministrador = async (req, res, next) => {
 
 const obtenerRutinasGenerales = async (req, res, next) => {
   try {
-    const { id } = req.params; // ID del administrador
-    const administrador = await Administrador.findById(id);
-    if (!administrador) {
-      return res.status(404).json({ message: "Administrador no encontrado" });
-    }
-    const rutinasGenerales = administrador.rutinas;
-    if (!rutinasGenerales || rutinasGenerales.length === 0) {
+    const rutinas = await Rutina.find();
+    if (!rutinas || rutinas.length === 0) {
       return res.status(404).json({ message: "No hay rutinas generales" });
     }
+
+    const $rut = rutinas.map((rutina) => ({
+      id: rutina._id,
+      nombre: rutina.nombre,
+    }));
+
     res.status(200).json({
       message: "Rutinas generales obtenidas exitosamente",
-      rutinasGenerales,
+      rutinas: $rut,
       ok: true,
     });
   } catch (error) {
@@ -48,36 +52,113 @@ const obtenerRutinasGenerales = async (req, res, next) => {
   }
 };
 
-const crearRutinaGeneral = async (req, res, next) => {
+const obtenerRutinasGeneralesCompletas = async (req, res, next) => {
   try {
-    const { id } = req.params; // ID del administrador
-    const { nombre, rutina } = req.body;
-    const admin = await Administrador.findById(id);
-    if (!admin) {
-      return res.status(404).json({ message: "Administrador no encontrado" });
+    const rutinas = await Rutina.find();
+    if (!rutinas || rutinas.length === 0) {
+      return res.status(404).json({ message: "No hay rutinas generales" });
     }
 
-    const nuevaRutina = {
-      nombre,
-      rutina: rutina.map((ejercicio) => ({
-        ejercicio: ejercicio.ejercicio,
-        series: ejercicio.series,
-        repeticiones: ejercicio.repeticiones,
-        descanso: ejercicio.descanso,
-      })),
-    };
-
-    admin.rutinas.push(nuevaRutina);
-    await admin.save();
-
-    res.status(201).json({
-      message: "Rutina general creada exitosamente",
-
-      rutina: nuevaRutina,
+    res.status(200).json({
+      message: "Rutinas generales obtenidas exitosamente",
+      rutinas,
       ok: true,
     });
   } catch (error) {
     next(error);
+  }
+};
+
+const editarRutinaGeneral = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { nombre, descripcion, ejercicios } = req.body;
+    const rutina = await Rutina.findById(id);
+
+    if (!rutina) {
+      return res.status(404).json({ message: "Rutina no encontrada" });
+    }
+    if (nombre) rutina.nombre = nombre;
+    if (descripcion) rutina.descripcion = descripcion;
+    if (ejercicios) {
+      rutina.ejercicios = ejercicios.map((ejercicio) => ({
+        ejercicio: ejercicio.ejercicio,
+        series: ejercicio.series,
+        repeticiones: ejercicio.repeticiones,
+        descanso: ejercicio.descanso,
+        descripcion: ejercicio.descripcion || "", // opcional
+      }));
+    }
+
+    await rutina.save();
+    res.status(200).json({
+      message: "Rutina general editada exitosamente",
+      rutina,
+      ok: true,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al editar la rutina general",
+      error: error.message,
+      ok: false,
+    });
+  }
+};
+
+const asignarRutinaGeneralAlumno = async (req, res, next) => {
+  const { rutinasID } = req.body; // ID de las rutinas generales a asignar
+  const { id } = req.params; // ID del alumno
+  console.log(id);
+
+  const alumno = await Alumno.findById(id);
+  if (!alumno || !id) {
+    return res.status(404).json({ message: "Alumno no encontrado" });
+  }
+
+  //agregar al alumno el id de la rutina general que es un array
+  rutinasID.map((rutinaID) => {
+    //castear el id a string
+
+    alumno.rutinasTemporales.push(rutinaID);
+  });
+  await alumno.save();
+  res.status(200).json({
+    message: "Rutinas generales asignadas exitosamente",
+    rutinasID,
+    ok: true,
+  });
+};
+
+const crearRutinaGeneral = async (req, res, next) => {
+  try {
+    const { nombre, descripcion, ejercicios } = req.body;
+
+    const nuevaRutina = {
+      nombre,
+      descripcion,
+      ejercicios: ejercicios.map((ejercicio) => ({
+        ejercicio: ejercicio.ejercicio,
+        series: ejercicio.series,
+        repeticiones: ejercicio.repeticiones,
+        descanso: ejercicio.descanso,
+        descripcion: ejercicio.descripcion || "", // opcional
+      })),
+    };
+
+    const rutinaGeneral = new Rutina(nuevaRutina);
+    await rutinaGeneral.save();
+
+    res.status(201).json({
+      message: "Rutina general creada exitosamente",
+      rutina: rutinaGeneral,
+      ok: true,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al crear la rutina general",
+      error: error.message,
+      ok: false,
+    });
   }
 };
 
@@ -165,8 +246,9 @@ const eliminarArchivo = async (req, res) => {
 const subirArchivo = async (req, res, next) => {
   try {
     const { nombre, descripcion } = req.body;
-    const { archivo } = req.files;
+    const { file } = req.files;
     const { idAdmin } = req.params;
+    console.log(file);
 
     const administrador = await Administrador.findById(idAdmin);
 
@@ -177,7 +259,7 @@ const subirArchivo = async (req, res, next) => {
     }
 
     // Subir archivo a Cloudinary
-    const result = await subirArchivoService(archivo);
+    const result = await subirArchivoService(file);
 
     administrador.archivos.push({
       nombre,
@@ -223,12 +305,12 @@ const crearAlumno = async (req, res, next) => {
 
 // Agregar una rutina a un alumno por ID
 const agregarRutina = async (req, res, next) => {
-  /* try { */
-  const { id } = req.params; // ID del alumno
-  const { nombre, descripcion, tip, ejercicios } = req.body;
-  console.log(req.body);
+  try {
+    const { id } = req.params; // ID del alumno
+    const { nombre, descripcion, tips, ejercicios } = req.body;
+    console.log(req.body);
 
-  /* const alumno = await Alumno.findById(id);
+    const alumno = await Alumno.findById(id);
     if (!alumno) {
       return res.status(404).json({ message: "Alumno no encontrado" });
     }
@@ -236,17 +318,54 @@ const agregarRutina = async (req, res, next) => {
     const nuevaRutina = {
       nombre,
       descripcion,
-      tip,
+      tips: tips || [],
       ejercicios: ejercicios || [],
     };
     alumno.rutina.push(nuevaRutina);
     await alumno.save();
-    res
-      .status(200)
-      .json({ message: "Rutina agregada exitosamente", rutina: nuevaRutina });
+    res.status(200).json({
+      message: "Rutina agregada exitosamente",
+      rutina: nuevaRutina,
+      ok: true,
+    });
   } catch (error) {
     next(error);
-  } */
+  }
+};
+
+const actualizarRutina = async (req, res, next) => {
+  try {
+    const { id, idRutina } = req.params; // ID del alumno
+
+    const { nombre, descripcion, tips, ejercicios } = req.body;
+
+    const alumno = await Alumno.findById(id);
+    if (!alumno) {
+      return res.status(404).json({ message: "Alumno no encontrado" });
+    }
+    // Se busca la rutina utilizando el método de subdocumentos de Mongoose
+    const rutina = alumno.rutina.id(idRutina);
+    if (!rutina) {
+      return res.status(404).json({ message: "Rutina no encontrada" });
+    }
+    // Actualizar los campos de la rutina
+    rutina.nombre = nombre || rutina.nombre;
+    rutina.descripcion = descripcion || rutina.descripcion;
+    rutina.tips = tips || rutina.tips;
+    rutina.ejercicios = ejercicios || rutina.ejercicios;
+    await alumno.save();
+    res.status(200).json({
+      message: "Rutina actualizada exitosamente",
+      rutina,
+      ok: true,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al actualizar la rutina",
+      error: error.message,
+      ok: false,
+    });
+  }
 };
 
 // Agregar un comentario a un alumno
@@ -371,32 +490,50 @@ const agregarTip = async (req, res, next) => {
 const generarPdf = async (req, res, next) => {
   try {
     const { id, idRutina } = req.params;
-    const alumno = await Alumno.findById(id);
-    if (!alumno) {
-      return res.status(404).json({ message: "Alumno no encontrado" });
-    }
-    const rutina = alumno.rutina.id(idRutina);
-    if (!rutina) {
-      return res.status(404).json({ message: "Rutina no encontrada" });
-    }
+    const { modelo } = req.query;
 
-    // Configurar el nombre del archivo
-    const fileName = `Rutina_${alumno.nombre}.pdf`;
+    let rutina;
+    let nombreArchivo;
+
+    // 1. Buscar como Alumno con rutina embebida
+    const alumno = await Alumno.findById(id);
+
+    if (alumno && idRutina && modelo === "rutina_general") {
+      rutina = alumno.rutina.id(idRutina);
+      if (!rutina) {
+        return res
+          .status(404)
+          .json({ message: "Rutina no encontrada en el alumno" });
+      }
+      nombreArchivo = `Rutina_${alumno.nombre}.pdf`;
+    } else {
+      // 2. Si no es un Alumno válido o no hay idRutina, buscar directamente como Rutina
+      rutina = await Rutina.findById(idRutina);
+      if (!rutina) {
+        return res.status(404).json({ message: "Rutina no encontrada" });
+      }
+      nombreArchivo = `Rutina_${rutina.nombre.replace(/\s+/g, "_")}.pdf`;
+    }
 
     // Configurar headers para la descarga
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${nombreArchivo}"`
+    );
 
     // Crear el documento PDF
     const doc = new PDFDocument();
-    doc.pipe(res); // Enviar el PDF al cliente directamente
+    doc.pipe(res);
 
     doc.fontSize(20).text(`Rutina: ${rutina.nombre}`, { underline: true });
     doc.moveDown();
-    doc.fontSize(14).text(`Descripción: ${rutina.descripcion}`);
+    doc
+      .fontSize(14)
+      .text(`Descripción: ${rutina.descripcion || "Sin descripción"}`);
     doc.moveDown();
 
-    if (rutina.ejercicios.length > 0) {
+    if (rutina.ejercicios?.length > 0) {
       doc.fontSize(16).text("Ejercicios:", { underline: true });
       doc.moveDown(0.5);
       rutina.ejercicios.forEach((ej, idx) => {
@@ -408,7 +545,7 @@ const generarPdf = async (req, res, next) => {
       });
     }
 
-    if (rutina.tips.length > 0) {
+    if (rutina.tips?.length > 0) {
       doc.moveDown();
       doc.fontSize(16).text("Tips:", { underline: true });
       doc.moveDown(0.5);
@@ -418,7 +555,7 @@ const generarPdf = async (req, res, next) => {
       });
     }
 
-    doc.end(); // Finalizar el documento
+    doc.end();
   } catch (error) {
     next(error);
   }
@@ -476,6 +613,30 @@ const actualizarGrafico = async (req, res, next) => {
   }
 };
 
+// Eliminar una rutina de un alumno por ID
+const eliminarRutina = async (req, res, next) => {
+  try {
+    const { id, idRutina } = req.params;
+    const alumno = await Alumno.findById(id);
+    if (!alumno) {
+      return res.status(404).json({ message: "Alumno no encontrado" });
+    }
+    const rutina = alumno.rutina.id(idRutina);
+    if (!rutina) {
+      return res.status(404).json({ message: "Rutina no encontrada" });
+    }
+    alumno.rutina.pull(rutina); // Eliminar la rutina del array
+    await alumno.save();
+    res.status(200).json({ message: "Rutina eliminada exitosamente" });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error al eliminar la rutina",
+      error: error.message,
+      ok: false,
+    });
+  }
+};
+
 module.exports = {
   listarAlumnos,
   obtenerAlumno,
@@ -496,4 +657,9 @@ module.exports = {
   eliminarArchivo,
   crearRutinaGeneral,
   obtenerRutinasGenerales,
+  editarRutinaGeneral,
+  asignarRutinaGeneralAlumno,
+  actualizarRutina,
+  eliminarRutina,
+  obtenerRutinasGeneralesCompletas,
 };

@@ -31,6 +31,13 @@ const AlumnoSchema = new Schema(
       },
     ],
 
+    rutinasTemporales: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Rutina",
+      },
+    ],
+
     rutina: [
       {
         fecha: { type: Date, default: Date.now },
@@ -44,10 +51,7 @@ const AlumnoSchema = new Schema(
             repeticiones: String,
             descripcion: String,
             descanso: String,
-            url: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: "Archivo",
-            },
+            url: String,
           },
         ],
       },
@@ -81,11 +85,11 @@ const AlumnoSchema = new Schema(
     movilidad: { type: Number, default: 0 },
     porcentajeGlobal: { type: Number, default: 0 },
 
-    tipoMembresia: {
+    /* tipoMembresia: {
       type: String,
       enum: ["basica", "premium"],
       default: "basica",
-    },
+    }, */
 
     fechaInicio: {
       type: Date,

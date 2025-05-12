@@ -5,6 +5,7 @@ const Archivos = require("../models/Archivos");
 const Administrador = require("../models/Administrador");
 const User = require("../models/User");
 const subirArchivoService = require("../services/SubirArchivo");
+const Rutina = require("../models/Rutina");
 
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -39,6 +40,92 @@ const login = async (req, res) => {
     console.error("Error al loguear:", error);
     return res.status(500).json({ message: "Error del servidor", ok: false });
   }
+};
+
+const obtenerRutinasAlumnoMixto = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Buscar al alumno
+    const alumno = await Alumno.findById(id);
+    if (!alumno) {
+      return res.status(404).json({ message: "Alumno no encontrado" });
+    }
+
+    const rutinaAlumno = alumno.rutina || [];
+
+    // Formatear rutinas asignadas
+    const rutinaFormateada = rutinaAlumno.map((rutina) => ({
+      id: rutina._id,
+      nombre: rutina.nombre,
+      descripcion: rutina.descripcion || "",
+      tips: rutina.tips || [],
+      ejercicios: rutina.ejercicios.map((ejercicio) => ({
+        ejercicio: ejercicio.ejercicio,
+        series: ejercicio.series,
+        repeticiones: ejercicio.repeticiones,
+        descanso: ejercicio.descanso,
+        descripcion: ejercicio.descripcion || "",
+        url: ejercicio.url || "",
+      })),
+      tipo: "rutina_general",
+    }));
+
+    // Obtener y formatear rutinas temporales (por ID)
+    const rutinasTemporalesDocs = await Rutina.find({
+      _id: { $in: alumno.rutinasTemporales },
+    });
+
+    const rutinasTemporalesFormateadas = rutinasTemporalesDocs.map(
+      (rutina) => ({
+        id: rutina._id,
+        nombre: rutina.nombre,
+        descripcion: rutina.descripcion || "",
+        tips: rutina.tips || [],
+        ejercicios: rutina.ejercicios.map((ejercicio) => ({
+          ejercicio: ejercicio.ejercicio,
+          series: ejercicio.series,
+          repeticiones: ejercicio.repeticiones,
+          descanso: ejercicio.descanso,
+          descripcion: ejercicio.descripcion || "",
+          url: ejercicio.url || "",
+        })),
+        tipo: "rutina_temporal",
+      })
+    );
+
+    // Unir ambas rutinas
+    const rutinas = [...rutinaFormateada, ...rutinasTemporalesFormateadas];
+
+    return res.json(rutinas);
+  } catch (error) {
+    console.error("Error al obtener rutinas:", error);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
+const obtenerRutinasTemporales = async (req, res) => {
+  const { id } = req.params;
+
+  // Buscar al alumno
+  const alumno = await Alumno.findById(id);
+  if (!alumno) {
+    return res.status(404).json({ message: "Alumno no encontrado" });
+  }
+
+  // Obtener rutinas temporales que es un array de IDS
+  const rutinasTemporales = await Promise.all(
+    alumno.rutinasTemporales.map(async (idRutina) => {
+      const rutina = await Rutina.findById(idRutina);
+      return rutina;
+    })
+  );
+
+  if (!rutinasTemporales) {
+    return res.status(404).json({ message: "Rutinas no encontradas" });
+  }
+
+  return res.status(200).json(rutinasTemporales);
 };
 
 const obtenerAlumno = async (req, res, next) => {
@@ -78,43 +165,85 @@ const obtenerRutinasAsignadas = async (req, res) => {
     const { id } = req.params;
 
     // Buscar al alumno
-    const alumno = await Alumno.findById(id);
+    const alumno = await Alumno.findById(id).lean();
     if (!alumno) {
       return res.status(404).json({ message: "Alumno no encontrado" });
     }
 
-    // Procesar cada rutina
-    const rutina = await Promise.all(
-      alumno.rutina.map(async (rutina) => {
-        // Obtener ejercicios con URLs resueltas
-        const ejercicios = await Promise.all(
-          rutina.ejercicios.map(async (ejercicio) => {
-            const archivo = await Archivos.findById(ejercicio.url);
-            return {
-              ejercicio: ejercicio.ejercicio, // Nombre del ejercicio
-              series: ejercicio.series,
-              repeticiones: ejercicio.repeticiones,
-              descanso: ejercicio.descanso,
-              url: archivo ? archivo.url : null, // Manejar caso si no se encuentra el archivo
-              descripcion: ejercicio.descripcion, // Descripción del ejercicio
-            };
-          })
-        );
+    const rutinasFinales = [];
 
-        return {
-          nombre: rutina.nombre,
-          descripcion: rutina.descripcion,
-          tips: rutina.tips,
-          ejercicios: ejercicios, // Ahora contiene los datos ya procesados
-        };
-      })
-    );
+    // Procesar rutinas embebidas
+    if (alumno.rutina && alumno.rutina.length > 0) {
+      const rutinasEmbutidas = await Promise.all(
+        alumno.rutina.map(async (rutina) => {
+          const ejercicios = await Promise.all(
+            rutina.ejercicios.map(async (ejercicio) => {
+              const archivo = await Archivos.findById(ejercicio.url).lean();
+              return {
+                ejercicio: ejercicio.ejercicio,
+                series: ejercicio.series,
+                repeticiones: ejercicio.repeticiones,
+                descanso: ejercicio.descanso,
+                descripcion: ejercicio.descripcion || "",
+                url: archivo ? archivo.url : null,
+              };
+            })
+          );
 
-    console.log(rutina);
-    return res.status(200).json(rutina);
+          return {
+            nombre: rutina.nombre,
+            descripcion: rutina.descripcion || "",
+            tips: rutina.tips || [],
+            ejercicios,
+            tipo: "rutina_general",
+          };
+        })
+      );
+
+      rutinasFinales.push(...rutinasEmbutidas);
+    }
+
+    // Procesar rutinas temporales referenciadas
+    if (alumno.rutinasTemporales && alumno.rutinasTemporales.length > 0) {
+      const rutinasTemp = await Rutina.find({
+        _id: { $in: alumno.rutinasTemporales },
+      }).lean();
+
+      const rutinasTemporalesProcesadas = await Promise.all(
+        rutinasTemp.map(async (rutina) => {
+          const ejercicios = await Promise.all(
+            rutina.ejercicios.map(async (ejercicio) => {
+              const archivo = await Archivos.findById(ejercicio.url).lean();
+              return {
+                ejercicio: ejercicio.ejercicio,
+                series: ejercicio.series,
+                repeticiones: ejercicio.repeticiones,
+                descanso: ejercicio.descanso,
+                descripcion: ejercicio.descripcion || "",
+                url: archivo ? archivo.url : null,
+              };
+            })
+          );
+
+          return {
+            nombre: rutina.nombre,
+            descripcion: rutina.descripcion || "",
+            tips: rutina.tips || [],
+            ejercicios,
+            tipo: "rutina_temporal",
+          };
+        })
+      );
+
+      rutinasFinales.push(...rutinasTemporalesProcesadas);
+    }
+
+    return res.json(rutinasFinales);
   } catch (error) {
-    console.error("Error obteniendo rutinas:", error);
-    return res.status(500).json({ message: "Error del servidor" });
+    console.error("Error al obtener rutinas asignadas:", error);
+    return res
+      .status(500)
+      .json({ message: "Error al obtener rutinas asignadas" });
   }
 };
 
@@ -182,4 +311,6 @@ module.exports = {
   obtenerRutinasAsignadas,
   obtenerRutina,
   subirArchivoAlumno,
+  obtenerRutinasTemporales,
+  obtenerRutinasAlumnoMixto,
 };

@@ -12,6 +12,8 @@ const {
   obtenerRutinasAsignadas,
   obtenerRutina,
   subirArchivoAlumno,
+  obtenerRutinasTemporales,
+  obtenerRutinasAlumnoMixto,
 } = require("../controllers/usuario.controller");
 
 const { obtenerAlumno } = require("../controllers/administrador.controller");
@@ -29,7 +31,8 @@ router.get("/:id/formulario/respuestas", asureAuth, obtenerRespuestasUsuario); /
 router.get("/:id/archivos/asignados", asureAuth, obtenerArchivosAsignados); // Listar todos los archivos asignados
 router.get("/:id/rutinas/asignadas", asureAuth, obtenerRutinasAsignadas); // Listar todas las rutinas asignadas
 router.get("/:id/rutinas/asignadas/:idRutina", asureAuth, obtenerRutina); // Listar todas las rutinas asignadas
-
+router.get("/:id/rutinas/temporales", asureAuth, obtenerRutinasTemporales); // Listar todas las rutinas temporales
+router.get("/:id/rutinas/mixtas", asureAuth, obtenerRutinasAlumnoMixto); // Listar todas las rutinas mixtas
 /* POST */
 router.post("/:usuarioId/formulario/responder", asureAuth, guardarRespuestas); // Responder un formulario
 router.post("/login", asureAuth, login); // Iniciar sesión

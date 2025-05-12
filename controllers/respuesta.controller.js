@@ -32,7 +32,9 @@ const guardarRespuestas = async (req, res, next) => {
     if (respuestaDoc) {
       // Actualiza respuestas existentes o agrega nuevas
       respuestas.forEach((nuevaRespuesta) => {
-        const preguntaId = new mongoose.Types.ObjectId(nuevaRespuesta.preguntaId);
+        const preguntaId = new mongoose.Types.ObjectId(
+          nuevaRespuesta.preguntaId
+        );
 
         const index = respuestaDoc.respuestas.findIndex(
           (r) => r.preguntaId.toString() === preguntaId.toString()
@@ -88,7 +90,6 @@ const guardarRespuestas = async (req, res, next) => {
   }
 };
 
-
 // Función para obtener respuestas por usuario y formulario
 
 const obtenerRespuestasUsuario = async (req, res, next) => {
@@ -98,7 +99,9 @@ const obtenerRespuestasUsuario = async (req, res, next) => {
     // Buscamos el formulario global (suponemos que existe uno)
     const formulario = await Formulario.findOne();
     if (!formulario) {
-      return res.status(404).json({ message: "No se encontró el formulario global." });
+      return res
+        .status(404)
+        .json({ message: "No se encontró el formulario global." });
     }
 
     // Buscamos las respuestas del usuario para ese formulario
@@ -132,6 +135,5 @@ const obtenerRespuestasUsuario = async (req, res, next) => {
     next(error);
   }
 };
-
 
 module.exports = { guardarRespuestas, obtenerRespuestasUsuario };

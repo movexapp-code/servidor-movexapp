@@ -4,7 +4,7 @@ const subirArchivoService = async (archivo) => {
   try {
     const result = await cloudinary.uploader.upload(archivo.path, {
       resource_type: "auto",
-      public_id: `archivos/${archivo. originalFilename}`, // Usar filename en lugar de name
+      public_id: `archivos/${archivo.originalFilename}`, // Usar filename en lugar de name
     });
 
     return result;
@@ -13,5 +13,4 @@ const subirArchivoService = async (archivo) => {
     throw new Error("Error al subir el archivo");
   }
 };
-
 module.exports = subirArchivoService;

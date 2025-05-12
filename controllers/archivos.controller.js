@@ -15,10 +15,11 @@ const obtenerArchivos = async (req, res) => {
 const subirArchivos = async (req, res) => {
   try {
     const { nombre } = req.body;
-    const { archivo } = req.files;
+    const { file } = req.files;
+    console.log(file);
 
-    const result = await subirArchivoService(archivo);
-    console.log(archivo);
+    const result = await subirArchivoService(file);
+    //console.log(file);
 
     if (!result) {
       return res.status(500).json({ message: "Error al subir el archivo" });
@@ -36,9 +37,13 @@ const subirArchivos = async (req, res) => {
     res.status(200).json({
       message: "Archivo subido correctamente",
       archivo: nuevoArchivo,
+      ok: true,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error al subir el archivo-catch" });
+    console.error("Error al subir el archivo:", error);
+    res
+      .status(500)
+      .json({ message: "Error al subir el archivo-catch", ok: false });
   }
 };
 
