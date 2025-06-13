@@ -33,4 +33,12 @@ app.use("/archivos", archivosRoutes);
 app.use("/formulario", formularioRoutes);
 app.use("/videos", videoRoutes);
 
+app.get("/", (req, res) => {
+    res.status(200).send({
+        message: "Bienvenido a la API REST de la plataforma de videos",
+        version: "1.0.0",
+    });
+    }
+);
+
 module.exports = app;
