@@ -72,7 +72,7 @@ const obtenerRutinasGeneralesCompletas = async (req, res, next) => {
 const editarRutinaGeneral = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { nombre, descripcion, ejercicios } = req.body;
+    const { nombre, descripcion, ejercicios, tags } = req.body;
     const rutina = await Rutina.findById(id);
 
     if (!rutina) {
@@ -80,6 +80,7 @@ const editarRutinaGeneral = async (req, res, next) => {
     }
     if (nombre) rutina.nombre = nombre;
     if (descripcion) rutina.descripcion = descripcion;
+    if (tags) rutina.tags = tags;
     if (ejercicios) {
       rutina.ejercicios = ejercicios.map((ejercicio) => ({
         ejercicio: ejercicio.ejercicio,
@@ -131,11 +132,12 @@ const asignarRutinaGeneralAlumno = async (req, res, next) => {
 
 const crearRutinaGeneral = async (req, res, next) => {
   try {
-    const { nombre, descripcion, ejercicios } = req.body;
+    const { nombre, descripcion, ejercicios, tags } = req.body;
 
     const nuevaRutina = {
       nombre,
       descripcion,
+      tags,
       ejercicios: ejercicios.map((ejercicio) => ({
         ejercicio: ejercicio.ejercicio,
         series: ejercicio.series,
@@ -307,7 +309,7 @@ const crearAlumno = async (req, res, next) => {
 const agregarRutina = async (req, res, next) => {
   try {
     const { id } = req.params; // ID del alumno
-    const { nombre, descripcion, tips, ejercicios } = req.body;
+    const { nombre, descripcion, tips, ejercicios, tags} = req.body;
     console.log(req.body);
 
     const alumno = await Alumno.findById(id);
@@ -318,6 +320,7 @@ const agregarRutina = async (req, res, next) => {
     const nuevaRutina = {
       nombre,
       descripcion,
+      tags: tags || [],
       tips: tips || [],
       ejercicios: ejercicios || [],
     };

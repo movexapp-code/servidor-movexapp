@@ -13,6 +13,7 @@ const RutinaSchema = new Schema({
       descripcion: String,
     },
   ],
+  tags: [String],
 });
 
 module.exports = mongoose.model("Rutina", RutinaSchema);

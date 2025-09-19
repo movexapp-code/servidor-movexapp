@@ -44,6 +44,7 @@ const AlumnoSchema = new Schema(
         nombre: String,
         descripcion: String,
         tips: [String],
+        tags: [String],
         ejercicios: [
           {
             ejercicio: String,

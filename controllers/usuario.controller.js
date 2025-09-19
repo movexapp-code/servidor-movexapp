@@ -60,6 +60,7 @@ const obtenerRutinasAlumnoMixto = async (req, res) => {
       nombre: rutina.nombre,
       descripcion: rutina.descripcion || "",
       tips: rutina.tips || [],
+      tags: rutina.tags || [],
       ejercicios: rutina.ejercicios.map((ejercicio) => ({
         ejercicio: ejercicio.ejercicio,
         series: ejercicio.series,
@@ -68,7 +69,7 @@ const obtenerRutinasAlumnoMixto = async (req, res) => {
         descripcion: ejercicio.descripcion || "",
         url: ejercicio.url || "",
       })),
-      tipo: "rutina_general",
+      tipo: "rutina_asignada",
     }));
 
     // Obtener y formatear rutinas temporales (por ID)
@@ -76,12 +77,34 @@ const obtenerRutinasAlumnoMixto = async (req, res) => {
       _id: { $in: alumno.rutinasTemporales },
     });
 
+    const rutinasCompletasTemporales = await Rutina.find();
+
+    const rutinasCompletasFormateadas = rutinasCompletasTemporales.map(
+      (rutina) => ({
+        id: rutina._id,
+        nombre: rutina.nombre,
+        descripcion: rutina.descripcion || "",
+        tips: rutina.tips || [],
+        tags: rutina.tags || [],
+        ejercicios: rutina.ejercicios.map((ejercicio) => ({
+          ejercicio: ejercicio.ejercicio,
+          series: ejercicio.series,
+          repeticiones: ejercicio.repeticiones,
+          descanso: ejercicio.descanso,
+          descripcion: ejercicio.descripcion || "",
+          url: ejercicio.url || "",
+        })),
+        tipo: "rutina_general",
+      })
+    );
+
     const rutinasTemporalesFormateadas = rutinasTemporalesDocs.map(
       (rutina) => ({
         id: rutina._id,
         nombre: rutina.nombre,
         descripcion: rutina.descripcion || "",
         tips: rutina.tips || [],
+        tags: rutina.tags || [],
         ejercicios: rutina.ejercicios.map((ejercicio) => ({
           ejercicio: ejercicio.ejercicio,
           series: ejercicio.series,
@@ -95,7 +118,12 @@ const obtenerRutinasAlumnoMixto = async (req, res) => {
     );
 
     // Unir ambas rutinas
-    const rutinas = [...rutinaFormateada, ...rutinasTemporalesFormateadas];
+
+    const rutinas = [
+      ...rutinaFormateada,
+      ...rutinasTemporalesFormateadas,
+      ...rutinasCompletasFormateadas,
+    ];
 
     return res.json(rutinas);
   } catch (error) {
